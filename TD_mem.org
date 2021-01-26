@@ -1,0 +1,426 @@
+#+TITLE: Measuring/Evaluating the performance of a computer system using benchmarks
+#+AUTHOR: yaspr
+
+* Introduction
+
+  The purpose of this lab is to run a number of _sequential_ (single core or single process/thread) *benchmarks/kernels* and 
+  *microbenchmarks* on a computer system running a *Linux* operating system in order to measure/evaluate the performance of the code patterns on a target system.
+  
+  The benchmarks provided are *memory bound* and some are meant to exhibit code patterns found in real applications.
+  
+  Most of the benchmarks are implemented in assembly using *SIMD* instructions (*SSE*, *AVX*, and *AVX512*)
+  and are unrolled multiple times (*READ THE CODE!*). 
+
+  When you're in doubt, always *RTFM*.
+
+  _WARNING:_ *DO NOT USE A LINUX VIRTUAL MACHINE OR ANY VIRTUALIZATION ENVIRONMENT (docker, ...). YOU MUST RUN THE BENCHMARKS ON A NATIVE LINUX INSTALLATION.*
+  
+  _WARNING:_ *DO NOT COPY THE MEASUREMENT DATA OF YOUR CLASSMATES. ANY FRAUD OR PLAGIARISM WILL BE SEVERLY SANCTIONNED AND REPORTED.* 
+  
+* Benchmarks/Microbenchmarks
+ 
+** load
+   
+   This benchmark performs memory loads. It is functionally useless and is only used to evaluate the performance
+   (bandwidth and latency) of the memory subsystem (Caches and DRAM). 
+   
+** store
+   
+   This benchmark performs memory stores in order to zero up a memory array. 
+
+** ntstore
+
+   This benchmark performs memory stores in order to zero up a memory array using *non-temporal* stores.
+   *Non-temporal* stores are special memory instructions that bypass the CPU caches and write directly into *DRAM*. 
+
+** copy
+   
+   This benchmark copies a memory array into another memory array.
+
+   Below is an example C code. 
+
+#+BEGIN_SRC c
+
+void copy(double *restrict a, double *restrict b, u64 n)
+{
+  for (u64 i = 0; i < n; i++)
+    a[i] = b[i];
+}
+
+#+END_SRC
+
+   _Note:_ This benchmark is implemented in assembly and the C code is only provided for demonstrative purposes.
+   
+** memcpy
+
+   This benchmark copies a memory array into another memory array using the *memcpy* primitive.
+
+   The *memcpy* primitive implementation will depend on the compiler used to compile the benchmark. 
+   
+   If you use *GCC*, the *memcpy* function implementation will come from the *glibc* (*GNU C Library*) installed on your system. 
+   
+   If the *Intel Compiler* is used, the call to *memcpy* will be replaced by a call to *=_intel_fast_memcpy=*. 
+   Here's an excerpt from the *Memory Movement and Initialization: Optimization and Control* article from *Intel*.
+
+#+BEGIN_EXAMPLE
+
+Because these libc mem*() functions are so common, the Intel Compilers provide optimized versions of memset and memcpy in the Intel Compiler provided library 'libirc'.  
+This library and specifically these functions are intended to replace the calls to mem*() functions with a more optimized version of the mem*() functions.  
+The Intel replacement libraries have symbol names _intel_fast_memset and _intel_fast_memcpy. 
+
+#+END_EXAMPLE
+   
+  The *AMD Optimizing CPU Libraries* (*AOCL*) also provides optimized versions of *memcpy* for sizes greater than 1MB.
+   
+** pc (Random Pointer Chasing)
+   
+   This benchmark performs *random* pointer chasing in order to evaluate the _*real*_ latency of *DRAM* loads.
+   The random accesses break the CPU prefetchers because the memory addresses are not predictable. This also helps avoid reusing memory which allows to bypass the caches.  
+   All data accesses will then be serviced from *DRAM*.
+   
+   The main loop is written in assembly and accesses an array initialized and shuffled as follows:
+
+#+BEGIN_SRC c
+
+//This function initializes an array by writing the address of a location at the location  
+void init(void **restrict a, u64 n)
+{
+  for (u64 i = 0; i < n; i++)
+    a[i] = &a[i];
+}
+
+//This function performs a shuffle on the given array with cacheline granularity 
+//On x86 architectures (Intel and AMD), a cacheline is 64B, or 8x8 bytes - each elements is 8 bytes (void * address).
+void shuffle(void **restrict a, u64 n)
+{
+  //
+  u64 i = 0;
+  u64 ii = 0;
+  u64 nn = n;
+  
+  //
+  while (i < nn)
+    {
+      //Pick a random position between 0 and nn - 8
+      ii = randxy(0, nn - 8);
+
+      //Make sure ii is divisible by 8
+      ii -= (ii & 7);
+  
+      //Swap the ii cacheline with last cacheline
+      for (u64 j = 0; j < CACHELINE_SIZE / sizeof(void *); j++)
+	{
+	  void *tmp = a[j + nn - 8];
+
+	  a[j + nn - 8] = a[j + ii];
+	  a[j + ii] = tmp;
+	}
+      
+      //Shrink the array
+      nn -= 8;
+      
+      //
+      i += 8;
+    }
+}
+   
+#+END_SRC
+
+** reduc
+
+   This benchmark performs an array reduction.
+
+   An example C code for array reduction.
+
+#+BEGIN_SRC c
+
+void reduc(double *restrict a, u64 n)
+{
+  for (u64 i = 0; i < n; i++)
+    r += a[i];
+}
+
+#+END_SRC
+
+   _Note:_ This benchmark is implemented in assembly and the C code is only provided for demonstrative purposes.
+
+** dotprod
+
+   This benchmark performs a *dot product* of two memory arrays.
+
+   An example C code for a dot product.
+
+#+BEGIN_SRC c
+
+void dotprod(double *restrict a, double *restrict b, u64 n)
+{
+  for (u64 i = 0; i < n; i++)
+    r += a[i] * b[i];
+}
+
+#+END_SRC
+
+   _Note:_ This benchmark is implemented in assembly using the *FMA* (Fused-Multiply-Add) instruction, a.k.a. *MAC* (Multiply-Accumulate), and the C code is only provided for demonstrative purposes.
+
+** triad
+
+   This benchmark performs a triad operation using three arrays: *a*, *b*, and *c*, and a scalar *d*.
+
+   The code below shows the general pattern of a triad operation.
+
+#+BEGIN_SRC c
+
+void triad(double *restrict a, double *restrict b, double *restrict c, double d, u64 n)
+{
+  for (u64 i = 0; i < n; i++)
+    c[i] += a[i] + b[i] * d;
+}
+
+#+END_SRC
+
+   In our case, this pattern is changed to the following:
+
+#+BEGIN_SRC c
+
+void triad(double *restrict a, double *restrict b, double *restrict c, u64 n)
+{
+  for (u64 i = 0; i < n; i++)
+    c[i] += a[i] * b[i];
+}
+    
+#+END_SRC
+
+   _Note:_ This benchmark is also implemented in assembly using the *FMA* (Fused-Multiply-Add) operation and the C code is only provided for demonstrative purposes.
+
+* Preparing the system before measurements
+
+  In order to perform *CLEAN* measurements and obtain valid values for the desired performance metrics, the system must be stable/consistent or *quiesced*.
+  To ensure the consistency of measurements, certain constraints *MUST* be respected. Otherwise, the measurements will be noisy/unstable and therefore *WRONG* and *USELESS*. 
+
+  The following sections cover the main constraints as well as how to ensure that they are satisfied.
+  
+** Power
+
+   If you are running the benchmarks on a laptop, make sure the device is connected to the power wall socket and _not running on battery_.
+   Laptops come with power control units that can affect the overall performance of the target system in order to save power (Watts) and increase battery life.   
+
+** CPU/Core frequency
+   
+   Modern CPUs also come with on-package power control units that perform frequency scaling (*DVFS* Dynamic Voltage and Frequency Scaling, or CPU throttling) in order to lower the power consumption of the 
+   compute cores in certain cases: when running on battery, when the CPU or compute cores are idle, ...
+   
+   The Linux operating system deploys drivers that allow users to set the frequency mode of the underlying system. You can use the *cpupower* command in order to show and set the frequency of target cores.
+   The following command shows the current frequency for cores 0, 2, and 4 on an *AMD Ryzen7 2700X CPU*:
+     #+BEGIN_SRC sh
+     
+       $ cpupower -c 0,2,4 frequency-info
+       
+       analyzing CPU 0:
+       driver: acpi-cpufreq
+       CPUs which run at the same hardware frequency: 0
+       CPUs which need to have their frequency coordinated by software: 0
+       maximum transition latency:  Cannot determine or is not supported.
+       hardware limits: 2.20 GHz - 3.70 GHz
+       available frequency steps:  3.70 GHz, 3.20 GHz, 2.20 GHz
+       available cpufreq governors: userspace performance schedutil
+       current policy: frequency should be within 2.20 GHz and 3.70 GHz.
+                  The governor "userspace" may decide which speed to use
+                  within this range.
+       current CPU frequency: 3.70 GHz (asserted by call to hardware)
+       boost state support:
+       Supported: yes
+       Active: yes
+       Boost States: 0
+       Total States: 3
+       Pstate-P0:  3700MHz
+       Pstate-P1:  3200MHz
+       Pstate-P2:  2200MHz
+       analyzing CPU 2:
+       driver: acpi-cpufreq
+       CPUs which run at the same hardware frequency: 2
+       CPUs which need to have their frequency coordinated by software: 2
+       maximum transition latency:  Cannot determine or is not supported.
+       hardware limits: 2.20 GHz - 3.70 GHz
+       available frequency steps:  3.70 GHz, 3.20 GHz, 2.20 GHz
+       available cpufreq governors: userspace performance schedutil
+       current policy: frequency should be within 2.20 GHz and 3.70 GHz.
+                  The governor "userspace" may decide which speed to use
+                  within this range.
+       current CPU frequency: 3.70 GHz (asserted by call to hardware)
+       boost state support:
+       Supported: yes
+       Active: yes
+       Boost States: 0
+       Total States: 3
+       Pstate-P0:  3700MHz
+       Pstate-P1:  3200MHz
+       Pstate-P2:  2200MHz
+       analyzing CPU 4:
+       driver: acpi-cpufreq
+       CPUs which run at the same hardware frequency: 4
+       CPUs which need to have their frequency coordinated by software: 4
+       maximum transition latency:  Cannot determine or is not supported.
+       hardware limits: 2.20 GHz - 3.70 GHz
+       available frequency steps:  3.70 GHz, 3.20 GHz, 2.20 GHz
+       available cpufreq governors: userspace performance schedutil
+       current policy: frequency should be within 2.20 GHz and 3.70 GHz.
+                  The governor "userspace" may decide which speed to use
+                  within this range.
+       current CPU frequency: 3.70 GHz (asserted by call to hardware)
+       boost state support:
+       Supported: yes
+       Active: yes
+       Boost States: 0
+       Total States: 3
+       Pstate-P0:  3700MHz
+       Pstate-P1:  3200MHz
+       Pstate-P2:  2200MHz
+
+     #+END_SRC
+     
+     The *cpupower* command also provides all the valid frequency values and *governors*:
+     #+BEGIN_EXAMPLE
+    
+       hardware limits: 2.20 GHz - 3.70 GHz                                                                                                                                                                                                    
+       available frequency steps:  3.70 GHz, 3.20 GHz, 2.20 GHz                                                                                                                                                                                
+       available cpufreq governors: userspace performance schedutil                                                                                                                                                                            
+    
+     #+END_EXAMPLE
+     
+     In this case, the highest possible frequency is *3.7GHz* and the lowest is *2.2GHz*. The CPU cores can also run at *3.2GHz*. 
+     
+     We can also notice that multiple *governors* are available: *userspace*, *performance*, and *schedutil*. A governor is a mode 
+     that allows the operating system to pick the frequency depending on certain constrains. The *userspace* governor allows the user
+     to set the desired frequency according to the valid available values. The *performance* governor chooses the highest frequency value for
+     maximum performanmce. For more details about the *schedutil* governor check out the first two links in the references section. 
+     
+     To set the frequency of core 12 (you can also use a range or a list as show above) to 3.2GHz, the following command can be used:
+     #+BEGIN_SRC sh
+     
+       $ cpupower -c 12 frequency-set -f 3.2GHz 
+	
+     #+END_SRC
+     
+     For more details about the *cpupower* command *RTFM*: man cpupower.
+     
+     Before running the benchmarks, you have to make sure that the CPU frequency is constant during the whole run and for all benchmarks. This can be
+     achieved by setting the frequency to the maximum available value (*userspace* governor). 
+
+     _WARNING_: *DO NOT USE ANY OTHER GOVERNOR OTHER THAN userspace OR, ONLY IF USERSPACE IS NOT AVAILABLE, PERFORMANCE*.
+
+** Background services and system noise
+   
+   In order to lower the amount of system noise, you must make sure that no background processes, or fewer, are running while the benchmarks are being measured.
+   If a process is mapped to the same core as the benchmark, the operating system process scheduler will migrate the benchmark process into another core. This
+   thread migration implies context switching (moving the process/thread CPU register values into another CPU core) and will induce a noticeable loss in performance.
+   Therefore, you must not run any other application (Firefox, Chromium, ...) except for a terminal that will allow you to execute the benchmarks.  
+
+   If you want to run the benchmarks in the most ideal conditions, you must not start the operating system *GUI* (GNOME, KDE, xfce, ...) and remain in console mode.
+   Also, avoid running any operating system services (NetworkManager, DHCP daemon, web server, NTP daemon, ...).
+   
+** Process/thread pinning
+
+   To avoid process/thread migration, you can pin the process or thread to a CPU core using the *taskset* command as follows:
+   #+BEGIN_SRC sh
+   
+     $ taskset -c CORE_ID PROGRAM
+     
+   #+END_SRC
+   
+   This command signals to the operating system that the program is to run on the target core (=CORE_ID=) and to not migrate or schedule the process.
+   
+   You can also use the *numactl* command to map processes/threads to CPU nodes and cores as well as on which memory nodes should the memory be allocated (*RTFM*).
+   
+   _WARNING:_ *DO NOT PIN THREADS OR PROCESSES ON CORE 0. CORE 0 IS THE PREFERRED CORE FOR OPERATING SYSTEM TASKS.*
+
+* Deliverables
+
+** System information
+
+  First, you have to provide information about the compiler, the *glibc* version, and *ALL* the details about the system (CPU, caches, and memory) you decided to run
+  the benchmarks on. 
+
+  If you use GCC or a variant of CLANG (AMD Optimizing C/C++ Compiler or Intel OneAPI), the following commands can be used to determine the compiler version:
+  #+BEGIN_SRC sh
+    
+    $ gcc --version
+    
+    #Original clang
+    $ clang --version
+    
+    #AMD clang
+    $ aocc --version
+
+    #Intel OneAPI clang
+    $ icx --version
+    $ icc --version
+
+  #+END_SRC
+
+  To obtain the *glibc* version, use the following command:
+  #+BEGIN_SRC sh
+  
+    $ ldd --version
+
+  #+END_SRC
+
+  For the CPU information, create a directory named *system* that contains three sub-directories *cpu*, *caches*, and *memory* populated as follows:
+  #+BEGIN_SRC sh
+  
+    #Creating ditectories
+    $ mkdir system system/cpu system/caches system/memory
+
+    #Gathering all hardware information
+    $ dmidecode > system/hw.txt
+    
+    #Populating the cpu directory
+    $ cat /proc/cpuinfo > system/cpu/info.txt
+
+    #Populating the caches directory
+    $ cat /sys/devices/system/cpu/cpu*/cache/index*/* > caches/all.txt
+    
+    #Populating the memory directory
+    $ cat /proc/meminfo > memory/info.txt
+
+  #+END_SRC
+
+  If you wish, you can add the output of other tools such as *numactl -H*, *likwid-topology*, or *lstopo*.
+ 
+** Report and data
+   
+   You have to provide a report (preferably *org-mode* or *PDF*) that contains histogram plots covering the bandwidth/latency for each variant of each benchmark.
+   
+   You must also provide the raw data files as well as the *Bash* and *GNUPlot* scripts used to generate the presented plots. Providing all the information
+   is key to ensure the _reproducibility_ of the performance measurement experiments.
+   
+   To generate a file with the bandwidth measurements for each variant of a benchmark, you can use the following command:
+   #+BEGIN_SRC sh
+     
+     #Running the load benchmark on 24KiB of memory (fits in L1 cache) with a kernel repetition value of 1000 to stabilize the runs
+     #The cut command selects column 1 (variant name) and 9 (bandwidth value) using the ';' as separator 
+     $ taskset -c CORE_ID ./load_SSE_AVX $(( 24 * 2**10 )) 1000 | cut -d';' -f1,9 > load_L1.dat  
+     
+   #+END_SRC
+
+   A *GNUPlot* script is provided as an example for plot generation. In order to run the script, you can use the following command:
+   #+BEGIN_SRC sh
+   
+     $ gnuplot -c "plot_bw.gp" > load_bw.png
+     
+   #+END_SRC
+
+   #+CAPTION: Load benchmark on an AMD Ryzen7 2700X
+   #+NAME: fig:load_AMD_Ryzen7
+   #+ATTR_HTML: :width 1500px
+   [[./load_bw.png]]
+
+   _WARNING:_ *YOU MUST MAKE SURE THE STANDARD DEVIATION IS BELOW 7%. OTHERWISE, THE MEASUREMENTS WILL BE CONSIDERED WRONG.*
+   
+* References
+
+  - https://lwn.net/Articles/682391/
+  - https://lkml.org/lkml/2016/3/17/420
+  - https://developer.amd.com/amd-aocl/
+  - https://en.wikipedia.org/wiki/Dynamic_frequency_scaling
+  - https://software.intel.com/content/www/us/en/develop/articles/memcpy-memset-optimization-and-control.html
+  - https://www.youtube.com/watch?v=LvX3g45ynu8
