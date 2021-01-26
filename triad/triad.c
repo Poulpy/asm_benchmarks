@@ -22,9 +22,11 @@ int main(int argc, char **argv)
   unsigned long long s = atoll(argv[1]);
   unsigned long long r = atoll(argv[2]);
 
+#ifdef FMA
   //Run SSE
   run_t *run_SSE = create_run(3, s, r, ALIGN_SSE, triad_SSE_ops, triad_SSE_fctnames, triad_SSE_fctptrs, 33);
   do_run(run_SSE);
+#endif
 
 #ifdef AVX
   //Run AVX

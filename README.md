@@ -17,9 +17,9 @@
 # Run benchmarks
 
 ```
-bash script.sh
+./script.sh
 ```
 
 # Notes
-- Added some compile time to check if machine has AVX set instructions
+- Added some compile time to check if machine has AVX and FMA set instructions
 - Don't run `pc` executable if you don't have AVX set instructions; unlike other benchmarks, pc only uses AVX
