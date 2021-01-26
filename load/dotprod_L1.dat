@@ -1,0 +1,4 @@
+        load_SSE_16B; 18.287
+        load_SSE_32B; 26.987
+        load_SSE_64B; 33.015
+       load_SSE_128B; 33.736
