@@ -12,12 +12,12 @@
  - store
  - triad
 
- Code was developed by @Yaspr.
+ Benchmark code is courtesy of @Yaspr.
 
 # Run benchmarks
 
 ```
-./script.sh
+script.sh
 ```
 
 # Notes

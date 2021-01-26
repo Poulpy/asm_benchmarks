@@ -14,3 +14,5 @@ cd -
 cd store/ && make && taskset -c 3 ./store_SSE_AVX 24576 1000 | cut -d';' -f1,9 > store_L1.dat
 cd -
 cd triad/ && make && taskset -c 3 ./triad_SSE_AVX 24576 1000 | cut -d';' -f1,9 > triad_L1.dat
+
+# gnuplot -c "load_plot.gp" > load_bw.png
