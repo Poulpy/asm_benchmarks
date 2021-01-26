@@ -1,0 +1,9 @@
+copy/copy_SSE_AVX
+dotprod/dotprod_SSE_AVX
+load/load_SSE_AVX
+ntstore/ntstore_SSE_AVX
+reduc/reduc_SSE_AVX
+store/store_SSE_AVX
+triad/triad_SSE_AVX
+memcpy
+pc
