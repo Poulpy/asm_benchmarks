@@ -1,25 +1,46 @@
 #!/bin/bash
 
 CORE_ID='3'
-BENCHMARKS=(copy dotprod load memcpy ntstore pc reduc store triad)
+# Removed pc and memcpy
+BENCHMARKS=(copy dotprod load ntstore reduc store triad)
 CACHES=(L1 L2)
 CACHES_SIZES=(24576 1048576)
 REPETITIONS=1000
-FREQUENCY='1.0GHz'
+# Can't set frequency, because there's only performance & powersave governor
+# modes
+FREQUENCY='2.0GHz'
 
-echo "sudo cpupower -c 3 frequency-set --governor performance"
-#echo "cpupower -c $CORE_ID frequency-set -f $FREQUENCY"
+sudo cpupower -c $CORE_ID frequency-set --governor performance
+sudo cpupower -c $CORE_ID frequency-set --min $FREQUENCY
 
+echo ""
+echo "* Compiling benchmarks *"
+echo ""
+for benchmark in "${BENCHMARKS[@]}"
+do
+    echo "[$benchmark] make"
+    cd ${benchmark}
+    make
+    cd -
+done
 
-for cache in $(seq 0 1)
+echo ""
+echo "* Running the benchmarks *"
+echo ""
+# set loop for the number of caches
+# Only one iteration here (L1) because L2 takes too much time :/
+for cache in {0..0}
 do
     for benchmark in "${BENCHMARKS[@]}"
     do
-        echo "cd ${benchmark}/"
-        echo "make"
-        echo "taskset -c $CORE_ID ./${benchmark}_${CACHES[$cache]}_SSE_AVX ${CACHES_SIZES[$cache]} $REPETITIONS | cut -d';' -f1,9 > ${benchmark}_${CACHES[$cache]}.dat"
-        echo "cd -"
+        echo "[$benchmark] cache: ${CACHES_SIZES[$cache]}"
+        cd ${benchmark}/
+        taskset -c $CORE_ID ./${benchmark}_SSE_AVX ${CACHES_SIZES[$cache]} $REPETITIONS | cut -d';' -f1,9 > ${benchmark}_${CACHES[$cache]}.dat
+        cd -
     done
 done
 
+echo ""
+echo "* Benchmarks done *"
+echo ""
 
