@@ -17,12 +17,18 @@ set boxwidth 0.9
 
 set xtic rotate by -45 scale 0
 
-set multiplot layout 2, 2 rowsfirst
+set multiplot layout 2, 3 rowsfirst
 
 set yrange [0:150]
 
 set title "L1 cache"
 plot "load/load_L1.dat" u 2:xtic(1) t "Pc pas terrible"
+plot "copy/copy_L1.dat" u 2:xtic(1) t "Pc pas terrible"
+#plot "dotprod/dotprod_L1.dat" u 2:xtic(1) t "Pc pas terrible"
+plot "ntstore/ntstore_L1.dat" u 2:xtic(1) t "Pc pas terrible"
+plot "reduc/reduc_L1.dat" u 2:xtic(1) t "Pc pas terrible"
+plot "store/store_L1.dat" u 2:xtic(1) t "Pc pas terrible"
+#plot "triad/triad_L1.dat" u 2:xtic(1) t "Pc pas terrible"
 
 # set title "L2 cache"
 # plot "load/load_L2.dat" u 2:xtic(1) t "Pc pas terrible"

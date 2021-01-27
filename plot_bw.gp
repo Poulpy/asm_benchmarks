@@ -21,8 +21,8 @@ set multiplot layout 2, 2 rowsfirst
 
 set yrange [0:150]
 
-# set title "L1 cache"
-# plot "load/load_L1.dat" u 2:xtic(1) t "AMD Ryzen7 2700X"
+set title "L1 cache"
+plot "load/load_L1.dat" u 2:xtic(1) t "AMD Ryzen7 2700X"
 
 # set title "L2 cache"
 # plot "load/load_L2.dat" u 2:xtic(1) t "AMD Ryzen7 2700X"
@@ -30,7 +30,7 @@ set yrange [0:150]
 # set title "L3 cache"
 # plot "load/load_L3.dat" u 2:xtic(1) t "AMD Ryzen7 2700X"
 
-set title "DRAM"
-plot "load/load_DRAM.dat" u 2:xtic(1) t "AMD Ryzen7 2700X"
+# set title "DRAM"
+#plot "load/load_DRAM.dat" u 2:xtic(1) t "AMD Ryzen7 2700X"
 
 unset multiplot

@@ -9,6 +9,8 @@ REPETITIONS=1000
 # Can't set frequency, because there's only performance & powersave governor
 # modes
 FREQUENCY='2.0GHz'
+GNUPLOT_SCRIPT='load_plot.gp'
+GNUPLOT_PLOTNAME='plot_bw.png'
 
 sudo cpupower -c $CORE_ID frequency-set --governor performance
 sudo cpupower -c $CORE_ID frequency-set --min $FREQUENCY
@@ -42,5 +44,15 @@ done
 
 echo ""
 echo "* Benchmarks done *"
+echo ""
+
+echo ""
+echo "* Creating the plots *"
+echo ""
+
+gnuplot -c "$GNUPLOT_SCRIPT" > $GNUPLOT_PLOTNAME
+
+echo ""
+echo "* Done * "
 echo ""
 
