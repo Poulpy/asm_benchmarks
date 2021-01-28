@@ -1,4 +1,4 @@
-        copy_SSE_16B; 6.270
-        copy_SSE_32B; 10.895
-        copy_SSE_64B; 14.669
-       copy_SSE_128B; 17.203
+        copy_SSE_16B; 6.268
+        copy_SSE_32B; 10.899
+        copy_SSE_64B; 14.648
+       copy_SSE_128B; 17.174
