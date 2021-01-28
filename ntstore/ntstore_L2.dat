@@ -1,0 +1,4 @@
+     ntstore_SSE_16B; 4.658
+     ntstore_SSE_32B; 4.717
+     ntstore_SSE_64B; 4.717
+    ntstore_SSE_128B; 4.719

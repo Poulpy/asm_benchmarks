@@ -5,7 +5,7 @@ CORE_ID='3'
 BENCHMARKS=(copy load ntstore reduc store)
 CACHES=(L1 L2)
 CACHES_SIZES=(24576 1048576)
-REPETITIONS=1000
+CACHES_REPETITIONS=(1000 400)
 # Can't set frequency, because there's only performance & powersave governor
 # modes
 FREQUENCY='2.0GHz'
@@ -13,7 +13,7 @@ GNUPLOT_SCRIPT='create_plots_bw.gp'
 GNUPLOT_PLOTNAME='plots_bw.png'
 
 sudo cpupower -c $CORE_ID frequency-set --governor performance
-sudo cpupower -c $CORE_ID frequency-set --min $FREQUENCY
+# sudo cpupower -c $CORE_ID frequency-set --min $FREQUENCY
 
 echo ""
 echo "* Compiling benchmarks *"
@@ -31,13 +31,13 @@ echo "* Running the benchmarks *"
 echo ""
 # set loop for the number of caches
 # Only one iteration here (L1) because L2 takes too much time :/
-for cache in {0..0}
+for cache in {0..1}
 do
     for benchmark in "${BENCHMARKS[@]}"
     do
         echo "[$benchmark] cache: ${CACHES_SIZES[$cache]}"
         cd ${benchmark}/
-        taskset -c $CORE_ID ./${benchmark}_SSE_AVX ${CACHES_SIZES[$cache]} $REPETITIONS | cut -d';' -f1,9 > ${benchmark}_${CACHES[$cache]}.dat
+        taskset -c $CORE_ID ./${benchmark}_SSE_AVX ${CACHES_SIZES[$cache]} ${CACHES_REPETITIONS[$cache]} | cut -d';' -f1,9 > ${benchmark}_${CACHES[$cache]}.dat
         cd -
     done
 done
