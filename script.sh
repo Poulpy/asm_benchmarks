@@ -5,7 +5,7 @@ CORE_ID='3'
 BENCHMARKS=(copy load ntstore reduc store)
 CACHES=(L1 L2)
 CACHES_SIZES=(24576 1048576)
-CACHES_REPETITIONS=(1000 400)
+CACHES_REPETITIONS=(1000 300)
 # Can't set frequency, because there's only performance & powersave governor
 # modes
 FREQUENCY='2.0GHz'
@@ -41,6 +41,20 @@ do
         cd -
     done
 done
+
+# removed pc because AVX
+OTHER_BENCHMARKS=(memcpy)
+for cache in {0..1}
+do
+    for benchmark in "${OTHER_BENCHMARKS[@]}"
+    do
+        echo "[$benchmark] cache: ${CACHES_SIZES[$cache]}"
+        cd ${benchmark}/
+        taskset -c $CORE_ID ./${benchmark} ${CACHES_SIZES[$cache]} ${CACHES_REPETITIONS[$cache]} | head -n34 | tail -n33 | cut -d',' -f1,4 > ${benchmark}_${CACHES[$cache]}.dat
+        cd -
+    done
+done
+
 
 echo ""
 echo "* Benchmarks done *"

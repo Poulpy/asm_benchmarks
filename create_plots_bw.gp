@@ -1,4 +1,4 @@
-set term png size 1900,2000 enhanced font "Terminal,10"
+set term png size 1900,1000 enhanced font "Terminal,10"
 
 set grid
 
@@ -17,33 +17,22 @@ set boxwidth 0.9
 
 set xtic rotate by -45 scale 0
 
-set multiplot layout 5, 2 rowsfirst
+set multiplot layout 3, 2 rowsfirst
 
 set yrange [0:100]
 
-set title "L1 cache"
-plot "load/load_L1.dat" u 2:xtic(1) t "Intel(R) Pentium(R)"
-set title "L2 cache"
-plot "load/load_L2.dat" u 2:xtic(1) t "Intel(R) Pentium(R)"
+set title "load benchmarks"
+plot "load/load_L1.dat" u 2:xtic(1) t "L1", "load/load_L2.dat" u 2:xtic(1) t "L2"
+set title "copy benchmarks"
+plot "copy/copy_L1.dat" u 2:xtic(1) t "L1", "copy/copy_L2.dat" u 2:xtic(1) t "L2"
+set title "store benchmarks"
+plot "store/store_L1.dat" u 2:xtic(1) t "L1", "store/store_L2.dat" u 2:xtic(1) t "L2"
+set title "ntstore benchmarks"
+plot "ntstore/ntstore_L1.dat" u 2:xtic(1) t "L1", "ntstore/ntstore_L2.dat" u 2:xtic(1) t "L2"
+set title "memcpy benchmarks"
+plot "memcpy/memcpy_L1.dat" u 2:xtic(1) t "L1", "memcpy/memcpy_L2.dat" u 2:xtic(1) t "L2"
+set title "reduc benchmarks"
+plot "reduc/reduc_L1.dat" u 2:xtic(1) t "L1", "reduc/reduc_L2.dat" u 2:xtic(1) t "L2"
 
-set title "L1 cache"
-plot "copy/copy_L1.dat" u 2:xtic(1) t "Intel(R) Pentium(R)"
-set title "L2 cache"
-plot "copy/copy_L2.dat" u 2:xtic(1) t "Intel(R) Pentium(R)"
-
-set title "L1 cache"
-plot "ntstore/ntstore_L1.dat" u 2:xtic(1) t "Intel(R) Pentium(R)"
-set title "L2 cache"
-plot "ntstore/ntstore_L2.dat" u 2:xtic(1) t "Intel(R) Pentium(R)"
-
-set title "L1 cache"
-plot "reduc/reduc_L1.dat" u 2:xtic(1) t "Intel(R) Pentium(R)"
-set title "L2 cache"
-plot "reduc/reduc_L2.dat" u 2:xtic(1) t "Intel(R) Pentium(R)"
-
-set title "L1 cache"
-plot "store/store_L1.dat" u 2:xtic(1) t "Intel(R) Pentium(R)"
-set title "L2 cache"
-plot "store/store_L2.dat" u 2:xtic(1) t "Intel(R) Pentium(R)"
 
 unset multiplot

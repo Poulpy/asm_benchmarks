@@ -1,4 +1,4 @@
-       reduc_SSE_16B; 9.412
-       reduc_SSE_32B; 18.144
-       reduc_SSE_64B; 18.155
-      reduc_SSE_128B; 18.158
+       reduc_SSE_16B; 9.426
+       reduc_SSE_32B; 18.143
+       reduc_SSE_64B; 18.163
+      reduc_SSE_128B; 18.162
