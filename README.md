@@ -1,6 +1,8 @@
 # ASM benchmarks
  Benchmarks on SIMD instructions : SSE, AVX, AVX512
 
+![](plots_bw.png)
+
  The benchmarks are in the following folders:
  - copy
  - dotprod
